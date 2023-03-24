@@ -13,6 +13,7 @@ import study.querydsl.domain.member.entity.QMember;
 import study.querydsl.domain.team.entity.Team;
 
 import static org.assertj.core.api.Assertions.*;
+import static study.querydsl.domain.member.entity.QMember.member;
 
 @SpringBootTest
 @Transactional
@@ -60,13 +61,14 @@ public class QuerydslBasicTest {
     @Test
     public void startQuerydsl() throws Exception {
         //given
-        QMember m = new QMember("m");
+
+//        QMember alias = new QMember("alias");     같은 테이블에 join이 들어가는 경우에 사용
 
         //when
         Member findMember = queryFactory
-                .select(m)
-                .from(m)
-                .where(m.username.eq("member1"))
+                .select(member)
+                .from(member)
+                .where(member.username.eq("member1"))
                 .fetchOne();
 
 
