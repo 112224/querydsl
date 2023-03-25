@@ -110,20 +110,20 @@ public class QuerydslBasicTest {
 
     @Test
     public void resultFetch() throws Exception {
-//        Member fetchOne = queryFactory
-//                .selectFrom(member)
-//                .fetchOne();
-//
-//        Member fetchFirst = queryFactory
-//                .selectFrom(member)
-//                .fetchFirst();
+        Member fetchOne = queryFactory
+                .selectFrom(member)
+                .fetchOne();
 
-//        QueryResults<Member> results = queryFactory
-//                .selectFrom(member)
-//                .fetchResults();
-//
-//        results.getTotal();
-//        List<Member> content = results.getResults();
+        Member fetchFirst = queryFactory
+                .selectFrom(member)
+                .fetchFirst();
+
+        QueryResults<Member> results = queryFactory
+                .selectFrom(member)
+                .fetchResults();
+
+        results.getTotal();
+        List<Member> content = results.getResults();
 
         long l = queryFactory
                 .selectFrom(member)
@@ -131,5 +131,32 @@ public class QuerydslBasicTest {
 
 
 
+    }
+
+    /**
+     * 회원정렬 순서
+     * 1. 회원 나이 내림차순(desc)
+     * 2. 회원 이름 오룸차순(asc)
+     * 회원의 이름이 없을경우 마지막에 출력
+     */
+    @Test
+    public void sort() throws Exception {
+        //given
+
+        em.persist(new Member(null, 100));
+        em.persist(new Member("member5", 100));
+        em.persist(new Member("member6", 100));
+        //when
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq(100))
+                .orderBy(member.age.desc(), member.username.asc().nullsLast())
+                .fetch();
+
+        //then
+        for (Member member : result) {
+            System.out.println("member = " + member);
+        }
     }
 }
