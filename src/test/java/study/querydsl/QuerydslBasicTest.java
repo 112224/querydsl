@@ -253,4 +253,63 @@ public class QuerydslBasicTest {
         assertThat(teamB.get(team.name)).isEqualTo("teamB");
         assertThat(teamB.get(member.age.avg())).isEqualTo(35);
     }
+
+    @Test
+    public void joinTest() throws Exception {
+        //given
+
+        //when
+        List<Member> teamA = queryFactory
+                .select(member)
+                .from(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        //then
+        assertThat(teamA).extracting("username")
+                .containsExactly("member1", "member2");
+        for (Member member1 : teamA) {
+            System.out.println("member1.getTeam().getName() = " + member1.getTeam().getName());
+        }
+    }
+    
+    @Test
+    public void fetchJoin() throws Exception {
+        //given
+        List<Member> resultList = em.createQuery(
+                "select m from Member m " +
+                        "join fetch Team t " +
+                        "where  t.name = :teamName", Member.class
+        )
+                .setParameter("teamName", "teamA")
+                .getResultList();
+        //when
+        
+        //then
+        for (Member member1 : resultList) {
+            System.out.println("member1.getTeam().getName() = " + member1.getTeam().getName());
+        }
+    }
+
+    /**
+     * 회원의 이름이 팀 이름과 같은 회원을 조회
+     */
+    @Test
+    public void thetaJoin() throws Exception {
+        //given
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+        //when
+        List<Member> result = queryFactory
+                .select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+        //then
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
+    }
 }
