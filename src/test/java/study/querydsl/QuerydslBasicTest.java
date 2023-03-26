@@ -4,6 +4,8 @@ import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,9 @@ public class QuerydslBasicTest {
         em.persist(member2);
         em.persist(member3);
         em.persist(member4);
+
+        em.flush();
+        em.clear();
     }
 
     @Test
@@ -279,7 +284,7 @@ public class QuerydslBasicTest {
         //given
         List<Member> resultList = em.createQuery(
                 "select m from Member m " +
-                        "join fetch Team t " +
+                        "join fetch m.team t " +
                         "where  t.name = :teamName", Member.class
         )
                 .setParameter("teamName", "teamA")
@@ -352,5 +357,36 @@ public class QuerydslBasicTest {
         for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
+    }
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    public void noFetchJoin() throws Exception {
+        //given
+        
+        //when
+        Member member1 = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+        //then
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member1.getTeam());
+        assertThat(loaded).as("패치 조인 미적용 시").isFalse();
+    }
+
+    @Test
+    public void useFetchJoin() throws Exception {
+        //given
+
+        //when
+        Member member1 = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+        //then
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(member1.getTeam());
+        assertThat(loaded).as("패치 조인 적용 시").isTrue();
     }
 }
