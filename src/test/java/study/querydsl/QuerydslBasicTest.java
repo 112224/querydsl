@@ -4,7 +4,9 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
@@ -12,7 +14,6 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceUnit;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,13 +24,12 @@ import study.querydsl.domain.member.dto.QMemberDto;
 import study.querydsl.domain.member.dto.UserDto;
 import study.querydsl.domain.member.entity.Member;
 import study.querydsl.domain.member.entity.QMember;
-import study.querydsl.domain.team.entity.QTeam;
 import study.querydsl.domain.team.entity.Team;
 
 import java.util.List;
 
-import static com.querydsl.jpa.JPAExpressions.*;
-import static org.assertj.core.api.Assertions.*;
+import static com.querydsl.jpa.JPAExpressions.select;
+import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.domain.member.entity.QMember.member;
 import static study.querydsl.domain.team.entity.QTeam.team;
 
@@ -41,6 +41,7 @@ public class QuerydslBasicTest {
     EntityManager em;
 
     JPAQueryFactory queryFactory;
+
     @BeforeEach
     public void before() {
         queryFactory = new JPAQueryFactory(em);
@@ -148,7 +149,6 @@ public class QuerydslBasicTest {
                 .fetchCount();
 
 
-
     }
 
     /**
@@ -177,7 +177,7 @@ public class QuerydslBasicTest {
             System.out.println("member = " + member);
         }
     }
-    
+
     @Test
     public void paging1() throws Exception {
         //given
@@ -242,12 +242,13 @@ public class QuerydslBasicTest {
 
     /**
      * 팀의 이름과 각 팀의 평균 연령
+     *
      * @throws Exception
      */
     @Test
     public void group() throws Exception {
         //given
-        
+
         //when
         List<Tuple> result = queryFactory
                 .select(
@@ -288,19 +289,19 @@ public class QuerydslBasicTest {
             System.out.println("member1.getTeam().getName() = " + member1.getTeam().getName());
         }
     }
-    
+
     @Test
     public void fetchJoin() throws Exception {
         //given
         List<Member> resultList = em.createQuery(
-                "select m from Member m " +
-                        "join fetch m.team t " +
-                        "where  t.name = :teamName", Member.class
-        )
+                        "select m from Member m " +
+                                "join fetch m.team t " +
+                                "where  t.name = :teamName", Member.class
+                )
                 .setParameter("teamName", "teamA")
                 .getResultList();
         //when
-        
+
         //then
         for (Member member1 : resultList) {
             System.out.println("member1.getTeam().getName() = " + member1.getTeam().getName());
@@ -346,10 +347,9 @@ public class QuerydslBasicTest {
     }
 
     /**
-     *
-     *  연관관계 없는 엔티티 외부 조인
-     *  회원의 이름이 팀 이름과 같은 대상 외부 조인
-     *  jpql : select m, t from Member m left join
+     * 연관관계 없는 엔티티 외부 조인
+     * 회원의 이름이 팀 이름과 같은 대상 외부 조인
+     * jpql : select m, t from Member m left join
      */
     @Test
     public void join_on_no_relation() throws Exception {
@@ -368,13 +368,14 @@ public class QuerydslBasicTest {
             System.out.println("tuple = " + tuple);
         }
     }
+
     @PersistenceUnit
     EntityManagerFactory emf;
 
     @Test
     public void noFetchJoin() throws Exception {
         //given
-        
+
         //when
         Member member1 = queryFactory
                 .selectFrom(member)
@@ -402,7 +403,6 @@ public class QuerydslBasicTest {
 
     /**
      * 나이가 가장 많은 회원 조회
-     *
      */
     @Test
     public void subQuery() throws Exception {
@@ -422,7 +422,6 @@ public class QuerydslBasicTest {
 
     /**
      * 나이가 평균 이상인 회원 조회
-     *
      */
     @Test
     public void subQueryGoe() throws Exception {
@@ -537,7 +536,7 @@ public class QuerydslBasicTest {
             System.out.println("s = " + s);
         }
     }
-    
+
     @Test
     public void simpleProjection() throws Exception {
         //given
@@ -711,5 +710,40 @@ public class QuerydslBasicTest {
                 .selectFrom(member)
                 .where(builder)
                 .fetch();
+    }
+
+    @Test
+    public void dynamicQuery_WhereParam() throws Exception {
+        //given
+        String usernameParam = "member1";
+        Integer ageParam = 10;
+
+        //when
+        List<Member> result = searchMember2(usernameParam, ageParam);
+
+        //then
+        assertThat(result.size()).isEqualTo(1);
+
+    }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+
+        return queryFactory
+                .selectFrom(member)
+                .where(usernameEq(usernameCond), ageEq(ageCond))
+//                .where(allEq(usernameCond, ageCond))
+                .fetch();
+    }
+
+    private BooleanExpression usernameEq(String usernameCond) {
+        return usernameCond != null ? member.username.eq(usernameCond) : null;
+    }
+
+    private BooleanExpression ageEq(Integer ageCond) {
+        return ageCond != null ? member.age.eq(ageCond) : null;
+    }
+
+    private Predicate allEq(String usernameCond, Integer ageCond) {
+        return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 }
