@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.domain.member.dto.MemberDto;
 import study.querydsl.domain.member.dto.QMemberDto;
@@ -62,8 +63,8 @@ public class QuerydslBasicTest {
         em.persist(member3);
         em.persist(member4);
 
-        em.flush();
-        em.clear();
+//        em.flush();
+//        em.clear();
     }
 
     @Test
@@ -745,5 +746,71 @@ public class QuerydslBasicTest {
 
     private Predicate allEq(String usernameCond, Integer ageCond) {
         return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+
+    @Test
+    public void bulkUpdate() throws Exception {
+
+        //when
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+        //then
+        for (Member member1 : result) {
+            System.out.println("member = " + member1);
+        }
+    }
+
+    @Test
+    public void bulkAdd() throws Exception {
+
+        //when
+        long count = queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+        List<Member> members = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        //then
+
+        for (Member member1 : members) {
+            System.out.println("member1 = " + member1);
+        }
+    }
+
+    @Test
+    public void bulkDelete() throws Exception {
+
+        //when
+        long count = queryFactory
+                .delete(member)
+                .where(member.age.lt(18))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+        List<Member> members = queryFactory
+                .selectFrom(member)
+                .fetch();
+        //then
+        for (Member member1 : members) {
+            System.out.println("member1 = " + member1);
+        }
     }
 }
