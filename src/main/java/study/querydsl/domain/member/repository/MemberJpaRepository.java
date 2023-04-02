@@ -1,14 +1,22 @@
 package study.querydsl.domain.member.repository;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
+import study.querydsl.domain.member.dto.MemberSearchCond;
+import study.querydsl.domain.member.dto.MemberTeamDto;
+import study.querydsl.domain.member.dto.QMemberTeamDto;
 import study.querydsl.domain.member.entity.Member;
+import study.querydsl.domain.team.entity.QTeam;
 
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.util.StringUtils.hasText;
 import static study.querydsl.domain.member.entity.QMember.member;
+import static study.querydsl.domain.team.entity.QTeam.team;
 
 @Repository
 public class MemberJpaRepository {
@@ -53,4 +61,34 @@ public class MemberJpaRepository {
                 .where(member.username.eq(username))
                 .fetch();
     }
+
+    public List<MemberTeamDto> searchByBuilder(MemberSearchCond cond) {
+
+        BooleanBuilder builder = new BooleanBuilder();
+        if (hasText(cond.getUsername())) {
+            builder.and(member.username.eq(cond.getUsername()));
+        }
+        if (hasText(cond.getTeamName())) {
+            builder.and(team.name.eq(cond.getTeamName()));
+        }
+        if (cond.getAgeGoe() != null) {
+            builder.and(member.age.goe(cond.getAgeGoe()));
+        }
+        if (cond.getAgeLoe() != null) {
+            builder.and(member.age.loe(cond.getAgeLoe()));
+        }
+        return queryFactory
+                .select(new QMemberTeamDto(
+                        member.id.as("memberId"),
+                        member.username,
+                        member.age,
+                        team.id.as("teamId"),
+                        team.name.as("teamName")
+                ))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(builder)
+                .fetch();
+    }
+
 }
